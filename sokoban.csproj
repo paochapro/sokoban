@@ -18,6 +18,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Content\maps\convert2.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Content\maps\convertme.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

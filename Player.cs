@@ -9,9 +9,6 @@ using static Utils;
 
 class Player : Entity
 {
-    public static readonly int sizeUnit = Map.BlockUnit;
-    Point position;
-
     bool pressingUp;
     bool pressingDown;
     bool pressingLeft;
@@ -19,14 +16,25 @@ class Player : Entity
 
     private void TryMove(int x, int y)
     {
-        foreach (Point wall in Map.Walls)
+        Point move = new Point(x, y);
+        Point finalPos = ((Rectangle)rectangle).Location + new Point(x, y);
+        if (Map.Walls[finalPos.Y, finalPos.X]) return;
+        if (!TryPush(move, finalPos)) return;
+
+        rectangle.Position += move;
+    }
+
+    private bool TryPush(Point move, Point final)
+    {
+        for(int i=0; i < Boxes.Count; ++i)
         {
-            if (position + new Point(x,y) == wall)
-                return;
+            Box box = Boxes.Get(i);
+
+            if(box.Rect.Position == final)
+                return box.TryMove(move.X, move.Y);
         }
 
-        position += new Point(x,y);
-        rectangle.Position = new(position.X * sizeUnit, position.Y * sizeUnit);
+        return true;
     }
 
     private void Controls()
@@ -53,13 +61,17 @@ class Player : Entity
 
     public override void Draw(SpriteBatch spriteBatch)
     {
-        spriteBatch.FillRectangle(rectangle, Color.Blue);
-        spriteBatch.DrawRectangle(rectangle, Color.DarkBlue, 5);
+        Rectangle final = (Rectangle)rectangle;
+
+        final.Location *= new Point(Map.BlockUnit);
+        final.Size *= new Point(Map.BlockUnit);
+
+        spriteBatch.FillRectangle(final, Color.Blue);
+        spriteBatch.DrawRectangle(final, Color.DarkBlue, 5);
     }
 
     public Player(Point pos)
-        : base( new RectangleF(pos * new Point(sizeUnit), new Vector2(sizeUnit, sizeUnit)), null)
+        : base( new RectangleF(pos, new Vector2(1)), null)
     {
-        position = pos;
     }
 }

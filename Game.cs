@@ -65,8 +65,8 @@ class MyGame : Game
         UI.Font = Content.Load<SpriteFont>("bahnschrift");
         CreateUi();
 
-        Map.ConvertToBinary("convertme.txt");
-        Map.LoadMap("converted_convertme.bin");
+        Map.ConvertToBinary("convert2.txt");
+        Map.LoadMap("converted_convert2.bin");
 
         player = new Player(playerSpawn);
         Entities.Add(player);
@@ -119,11 +119,17 @@ class MyGame : Game
     //Draw
     static private void DrawGame()
     {
-        foreach (Point wall in Map.Walls)
+        for(int y = 0; y < Map.Walls.GetLength(0); ++y)
+            for (int x = 0; x < Map.Walls.GetLength(1); ++x)
+                if (Map.Walls[y,x])
+                    spriteBatch.FillRectangle(new Rectangle(new Point(x,y) * new Point(Map.BlockUnit), new Point(Map.BlockUnit)), Color.Black);
+
+        foreach(Point goal in Map.Goals)
         {
-            spriteBatch.FillRectangle(new Rectangle(wall * new Point(Map.BlockUnit), new Point(Map.BlockUnit)), Color.Black);
+            spriteBatch.FillRectangle(new Rectangle(goal * new Point(Map.BlockUnit), new Point(Map.BlockUnit)), Color.Gray);
         }
 
+        Boxes.Draw(spriteBatch);
         player.Draw(spriteBatch);
     }
 
