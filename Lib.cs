@@ -49,7 +49,7 @@ static class Utils
     {
         int seed = (int)DateTime.Now.Ticks;
 
-        if(a > b) 
+        if(a > b)  
         {
             (a, b) = (b, a);
         } 
@@ -101,13 +101,13 @@ static class Utils
 
     //Math
     static public float center(float x, float x2, float size) => (x + x2) / 2 - size / 2;
-    static public int center(int x, int x2, int size) => (x + x2) / 2 - size / 2;
     static public float center(float x, float size) => x / 2 - size / 2;
+    static public int center(int x, int x2, int size) => (x + x2) / 2 - size / 2;
     static public int center(int x, int size) => x / 2 - size / 2;
     static public Vector2 center(Rectangle rect) => new Vector2( rect.X + (float)rect.Width / 2, rect.Y + (float)rect.Height / 2);
 
-    static public int percent(double value, double percent) => (int)Math.Round(value / 100 * percent);
     static public double avg(params double[] values) => values.Average();
+    static public int percent(double value, double percent) => (int)Math.Round(value / 100 * percent);
     static public int Round(double value) => (int)Math.Round(value);
     static public int Round(float value) => (int)Math.Round(value);
 }
@@ -390,8 +390,6 @@ abstract class UI
         spriteBatch.DrawString(Font, text, position, mainColor, 0, new Vector2(0,0), scale, SpriteEffects.None, 0);
     }
 
-
-
     protected readonly int layer = 0;
     public static int CurrentLayer { get; set; }
 
@@ -425,7 +423,6 @@ abstract class UI
     }
 }
 
-//Button
 class Button : UI
 {
     event Action func;
@@ -534,6 +531,7 @@ public class Group<T> where T : Entity
     static protected int lastGroupID = 0;
 
     static public int Count => group.Count;
+    static public List<T> All => group;
 
     static public T Get(int i) => group[i];
 

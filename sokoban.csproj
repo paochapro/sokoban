@@ -14,11 +14,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Content\maps\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="Content\maps\convert2.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Content\maps\convert3.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Content\maps\convert4.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Content\maps\convertme.txt">

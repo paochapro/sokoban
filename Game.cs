@@ -29,20 +29,17 @@ class MyGame : Game
     static private Vector2 camera;
     static public Vector2 Camera => camera;
 
-    static public bool Debug { get; private set; } = false;
+    static public bool Debug { get; private set; } = true;
 
     public enum GameState { Menu, Game }
 
-    private static GameState gameStateVariable; //never use this
-    public static GameState gameState
+    private static GameState gameState; //never use this
+    
+    public static void SetGameState(GameState gameState)
     {
-        get => gameStateVariable;
-        set
-        {
-            gameStateVariable = value;
-            UI.CurrentLayer = Convert.ToInt32(gameState);
-            Reset();
-        }
+        MyGame.gameState = gameState;
+        UI.CurrentLayer = Convert.ToInt32(gameState);
+        Reset();
     }
 
     static readonly Dictionary<GameState, Action> drawMethods = new()
@@ -51,11 +48,33 @@ class MyGame : Game
         [GameState.Game] = DrawGame,
     };
 
+    //Game
     static Player player;
+    public static Player Player => player;
+    static int currentMap = 1;
+    static int currentTime;
+    static bool pressingZ = false;
 
     //Initialization
     static private void Reset()
     {
+        Box.Boxes.Clear();
+        Map.Goals.Clear();
+        player.ResetTime();
+
+        currentTime = -1;
+    }
+
+    static bool mapCompleted = false;
+    static public void MapCompleted() => mapCompleted = true;
+
+    static private void NextMap()
+    {
+        Reset();
+        Map.LoadMap("map" + (currentMap++) + ".bin");
+        player.SetPosition(playerSpawn);
+
+        TimeChange();
     }
 
     protected override void LoadContent()
@@ -65,13 +84,15 @@ class MyGame : Game
         UI.Font = Content.Load<SpriteFont>("bahnschrift");
         CreateUi();
 
-        Map.ConvertToBinary("convert2.txt");
-        Map.LoadMap("converted_convert2.bin");
+        Map.ConvertToBinary("convertme.txt", "map1.bin");
+        Map.ConvertToBinary("convert2.txt", "map2.bin");
+        Map.ConvertToBinary("convert3.txt", "map3.bin");
+        Map.ConvertToBinary("convert4.txt", "map4.bin");
 
         player = new Player(playerSpawn);
-        Entities.Add(player);
 
-        gameState = GameState.Game;
+        SetGameState(GameState.Game);
+        NextMap();
     }
 
     protected override void Initialize()
@@ -88,6 +109,23 @@ class MyGame : Game
         base.Initialize();
     }
 
+    static public void TimeChange()
+    {
+        currentTime++;
+
+        foreach (Box box in Box.Boxes) box.NewTime(currentTime);
+        player.NewTime(currentTime);
+    }
+
+    static private void PreviousTime()
+    {
+        currentTime--;
+        if (currentTime < 0) currentTime = 0;
+
+        foreach (Box box in Box.Boxes) box.ShiftTo(currentTime);
+        player.ShiftTo(currentTime);
+    }
+
     //Main
     protected override void Update(GameTime gameTime)
     {
@@ -100,12 +138,15 @@ class MyGame : Game
         Event.ExecuteEvents(gameTime);
 
         if (gameState == GameState.Game)
-            Entities.Update(gameTime);
-
-        if (gameState != GameState.Game)
         {
-            base.Update(gameTime);
-            return;
+            if(player.PlayerMove())
+                TimeChange();
+        }
+
+        if (mapCompleted)
+        {
+            NextMap();
+            mapCompleted = false;
         }
 
         base.Update(gameTime);
@@ -113,7 +154,10 @@ class MyGame : Game
 
     static private void Controls()
     {
-
+        if(keys.IsKeyDown(Keys.Z) && !pressingZ)
+            PreviousTime();
+        
+        pressingZ = keys.IsKeyDown(Keys.Z);
     }
 
     //Draw
@@ -122,14 +166,17 @@ class MyGame : Game
         for(int y = 0; y < Map.Walls.GetLength(0); ++y)
             for (int x = 0; x < Map.Walls.GetLength(1); ++x)
                 if (Map.Walls[y,x])
-                    spriteBatch.FillRectangle(new Rectangle(new Point(x,y) * new Point(Map.BlockUnit), new Point(Map.BlockUnit)), Color.Black);
+                    spriteBatch.FillRectangle(new Rectangle(new Point(x,y) * new Point(Map.BlockUnit), new Point(Map.BlockUnit)), new Color(35,106,185));
 
-        foreach(Point goal in Map.Goals)
-        {
-            spriteBatch.FillRectangle(new Rectangle(goal * new Point(Map.BlockUnit), new Point(Map.BlockUnit)), Color.Gray);
-        }
+        foreach (Rectangle outline in Map.Outline)
+            spriteBatch.FillRectangle(outline, new Color(15, 86, 165));
 
-        Boxes.Draw(spriteBatch);
+        foreach (Point goal in Map.Goals)
+            spriteBatch.FillRectangle(new Rectangle(goal * new Point(Map.BlockUnit), new Point(Map.BlockUnit)), new Color(207, 202, 172));
+
+        foreach(Box box in Box.Boxes)
+            box.Draw(spriteBatch);
+        
         player.Draw(spriteBatch);
     }
 
@@ -140,27 +187,17 @@ class MyGame : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        graphics.GraphicsDevice.Clear(Color.LightBlue);
+        graphics.GraphicsDevice.Clear(new Color(247,242,212));
 
         spriteBatch.Begin();
         {
             UI.DrawElements(spriteBatch);
             drawMethods[gameState].Invoke();
+            DebugLines.Draw(spriteBatch);
         }
         spriteBatch.End();
 
         base.Draw(gameTime);
-    }
-
-    //Initialize game states
-    static private void StartGame()
-    {
-        gameState = GameState.Game;
-    }
-
-    static private void StartMenu()
-    {   
-        gameState = GameState.Menu;
     }
 
     static private void CreateUi()

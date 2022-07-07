@@ -6,33 +6,48 @@ namespace Sokoban;
 
 using static Utils;
 
-class Boxes : Group<Box> { }
-
-class Box : Entity
+class Box : ITimeShiftable
 {
-    //static readonly Texture2D boxTexture = MonoGame.LoadTexture("box");
-
-    bool moving = false;
-
-    static private void UpdateGoals()
+    static List<Box> boxes = new();
+    static public List<Box> Boxes => boxes;
+    
+    static public void UpdateGoals()
     {
         int completedGoals = 0;
-        for (int b = 0; b < Boxes.Count; ++b)
-        {
-            Box box = Boxes.Get(b);
 
-            for (int g = 0; g < Map.Goals.Count; ++g)
+        foreach (Box box in boxes)
+        {
+            foreach (Point goal in Map.Goals)
             {
-                if(box.Rect.Position == Map.Goals[g])
+                if (box.position == goal)
                     completedGoals++;
             }
         }
 
-        if(completedGoals == Map.Goals.Count)
-        {
-            print("Win");
-        }
+        if (completedGoals == Map.Goals.Count)
+            MyGame.MapCompleted();
     }
+
+    public Point position { get; private set; }
+    List<Point> timePosition = new();
+
+    public void ResetTime() => timePosition.Clear();
+
+    public void ShiftTo(int time)
+    {
+        position = timePosition[time];
+    }
+
+    public void NewTime(int time)
+    {
+        if (time >= timePosition.Count)
+            timePosition.Add(Point.Zero);
+
+        timePosition.Insert(time, position);
+    }
+
+    bool moving = false;
+
 
     public bool TryMove(int x, int y)
     {
@@ -40,20 +55,18 @@ class Box : Entity
             return false;
 
         Point move = new Point(x, y);
-        Point finalPos = ((Rectangle)rectangle).Location + move;
+        Point finalPos = position + move;
 
         if (Map.Walls[finalPos.Y, finalPos.X])
             return false;
 
         moving = true;
-        for (int i = 0; i < Boxes.Count; ++i)
+        foreach (Box box in boxes)
         {
-            Box box = Boxes.Get(i);
-
-            if (box == this || box.moving) 
+            if (box == this || box.moving)
                 continue;
 
-            if (box.Rect.Position == finalPos)
+            if (box.position == finalPos)
             {
                 if (!box.TryMove(x, y))
                 {
@@ -61,33 +74,22 @@ class Box : Entity
                     return false;
                 }
             }
-                
         }
         moving = false;
 
-        rectangle.Position += move;
+        position += move;
 
         UpdateGoals();
         return true;
     }
 
-    public override void Update(GameTime gameTime)
+    public void Draw(SpriteBatch spriteBatch)
     {
+        Rectangle final = new Rectangle(position * new Point(Map.BlockUnit), new Point(Map.BlockUnit));
+
+        spriteBatch.FillRectangle(final, new Color(214,26,70));
+        spriteBatch.DrawRectangle(final, new Color(194,6,50), 5);
     }
 
-    public override void Draw(SpriteBatch spriteBatch)
-    {
-        Rectangle final = (Rectangle)rectangle;
-
-        final.Location *= new Point(Map.BlockUnit);
-        final.Size *= new Point(Map.BlockUnit);
-
-        spriteBatch.FillRectangle(final, Color.Green);
-        spriteBatch.DrawRectangle(final, Color.DarkGreen, 5);
-    }
-
-    public Box(int x, int y)
-        : base(new RectangleF(new Point(x, y), new Point(1)), null)
-    {
-    }
+    public Box(int x, int y) => position = new Point(x, y);
 }

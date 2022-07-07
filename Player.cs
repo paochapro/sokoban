@@ -7,37 +7,57 @@ namespace Sokoban;
 
 using static Utils;
 
-class Player : Entity
+class Player : ITimeShiftable
 {
-    bool pressingUp;
-    bool pressingDown;
-    bool pressingLeft;
-    bool pressingRight;
+    List<Point> timePosition = new();
+    Point position = Point.Zero;
 
-    private void TryMove(int x, int y)
+    public void ResetTime() => timePosition.Clear();
+
+    public void ShiftTo(int time)
+    {
+        position = timePosition[time];
+    }
+
+    public void NewTime(int time)
+    {
+        if(time >= timePosition.Count)
+            timePosition.Add(Point.Zero);
+
+        timePosition.Insert(time, position);
+    }
+
+    public void SetPosition(Point pos) => position = pos;
+
+    private bool TryMove(int x, int y)
     {
         Point move = new Point(x, y);
-        Point finalPos = ((Rectangle)rectangle).Location + new Point(x, y);
-        if (Map.Walls[finalPos.Y, finalPos.X]) return;
-        if (!TryPush(move, finalPos)) return;
+        Point finalPos = position + new Point(x, y);
 
-        rectangle.Position += move;
+        if (Map.Walls[finalPos.Y, finalPos.X]) return false;
+        if (!TryPush(move, finalPos)) return false;
+
+        position += move;
+
+        if(x != 0 || y != 0) return true;
+
+        return false;
     }
 
     private bool TryPush(Point move, Point final)
     {
-        for(int i=0; i < Boxes.Count; ++i)
+        foreach(Box box in Box.Boxes)
         {
-            Box box = Boxes.Get(i);
-
-            if(box.Rect.Position == final)
+            if(box.position == final)
                 return box.TryMove(move.X, move.Y);
         }
 
         return true;
     }
 
-    private void Controls()
+
+    bool pressingUp, pressingDown, pressingLeft, pressingRight;
+    public bool PlayerMove()
     {
         int horizontalMove = 0;
         int verticalMove = 0;
@@ -46,32 +66,26 @@ class Player : Entity
         if(MyGame.keys.IsKeyDown(Keys.Up)       && !pressingUp)     verticalMove = -1;
         if(MyGame.keys.IsKeyDown(Keys.Down)     && !pressingDown)   verticalMove = 1;
 
-        TryMove(horizontalMove, verticalMove);
+        if (horizontalMove != 0 && verticalMove != 0)
+            horizontalMove = 0;
+        
 
         pressingUp      = MyGame.keys.IsKeyDown(Keys.Up);
         pressingDown    = MyGame.keys.IsKeyDown(Keys.Down);
         pressingLeft    = MyGame.keys.IsKeyDown(Keys.Left);
         pressingRight   = MyGame.keys.IsKeyDown(Keys.Right);
+
+        return TryMove(horizontalMove, verticalMove);
     }
 
-    public override void Update(GameTime gameTime)
+    public void Draw(SpriteBatch spriteBatch)
     {
-        Controls();
+        Rectangle final = new Rectangle(position * new Point(Map.BlockUnit), new Point(Map.BlockUnit));
+
+        spriteBatch.FillRectangle(final, new Color(24, 44, 67));
+        spriteBatch.DrawRectangle(final, new Color(9, 29, 52), 5);
     }
 
-    public override void Draw(SpriteBatch spriteBatch)
-    {
-        Rectangle final = (Rectangle)rectangle;
-
-        final.Location *= new Point(Map.BlockUnit);
-        final.Size *= new Point(Map.BlockUnit);
-
-        spriteBatch.FillRectangle(final, Color.Blue);
-        spriteBatch.DrawRectangle(final, Color.DarkBlue, 5);
-    }
-
-    public Player(Point pos)
-        : base( new RectangleF(pos, new Vector2(1)), null)
-    {
-    }
+    public Player(Point pos) => position = pos;
+    
 }

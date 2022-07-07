@@ -17,15 +17,21 @@ static class Map
     static bool[,] walls;
     static List<Point> goals = new List<Point>();
 
-    public static void LoadMap(string mapfile)
+    public static bool LoadMap(string mapfile)
     {
+        if (!File.Exists(mapFolder + mapfile))
+        {
+            Console.WriteLine(mapfile + " wasnt found!");
+            return false;
+        }
+
         using (BinaryReader reader = new BinaryReader(File.OpenRead(mapFolder + mapfile)))
         {
             Point mapSize = Point.Zero;
             mapSize.X = reader.ReadByte();
             mapSize.Y = reader.ReadByte();
 
-            walls = new bool[mapSize.X, mapSize.Y];
+            walls = new bool[mapSize.Y, mapSize.X];
 
             Console.WriteLine($"Map size: {mapSize.X}, {mapSize.Y}");
 
@@ -38,21 +44,24 @@ static class Map
 
                     if (blockType == BlockType.None) continue;
                     if (blockType == BlockType.Wall) walls[y, x] = true;
-                    if (blockType == BlockType.Box) Boxes.Add(new Box(x, y));
+                    if (blockType == BlockType.Box) Box.Boxes.Add(new Box(x, y));
                     if (blockType == BlockType.Goal) goals.Add(pos);
                     if (blockType == BlockType.Player) MyGame.playerSpawn = pos;
                 }
-                Console.WriteLine();
             }
         }
+
+        CreateOutline();
+
+        return true;
     }
 
-    public static void ConvertToBinary(string mapfile)
+    public static void ConvertToBinary(string mapfile, string dest)
     {
-        string convertedMapFile = mapFolder + "converted_" + mapfile.Replace(".txt", ".bin");
+        string destFile = mapFolder + dest;
 
         StreamReader reader = new StreamReader(mapFolder + mapfile);
-        BinaryWriter writer = new BinaryWriter(File.Open(convertedMapFile, FileMode.OpenOrCreate));
+        BinaryWriter writer = new BinaryWriter(File.Open(destFile, FileMode.OpenOrCreate));
 
         string sizeX = reader.ReadUntil(' ', true);
         string sizeY = reader.ReadUntil('\n', true);
@@ -97,4 +106,44 @@ static class Map
     }
 
     public enum BlockType { None, Wall, Box, Goal, Player }
+
+    static List<Rectangle> outline = new();
+    static public List<Rectangle> Outline => outline;
+    const int thickness = 5;
+
+    static void CreateOutline()
+    {
+        outline.Clear();
+        int bu = BlockUnit;
+
+        for (int y = 0; y < walls.GetLength(0); ++y)
+        {
+            for (int x = 0; x < walls.GetLength(1); ++x)
+            {
+                if (!walls[y, x]) continue;
+
+                var Check = (Point wall, Point pos, Point size) =>
+                {
+                    wall = new Point(wall.Y, wall.X);
+
+                    if (wall.X >= walls.GetLength(1) || wall.X < 0) return;
+                    if (wall.Y >= walls.GetLength(0) || wall.Y < 0) return;
+
+                    if (!walls[wall.Y, wall.X])
+                        outline.Add(new Rectangle(pos, size));
+                };
+
+                Check(new Point(y, x-1),    new Point(x * bu, y * bu),  new Point(thickness, bu));          //Left
+                Check(new Point(y-1, x-1),  new Point(x * bu, y * bu),  new Point(thickness, thickness));   //Left top
+                Check(new Point(y-1, x),    new Point(x * bu, y * bu),  new Point(bu, thickness));          //Top
+
+                Check(new Point(y-1, x+1),  new Point(x * bu + bu - thickness, y * bu), new Point(thickness, thickness));   //Right top
+                Check(new Point(y, x+1),    new Point(x * bu + bu - thickness, y * bu), new Point(thickness, bu));          //Right
+                Check(new Point(y+1, x-1),  new Point(x * bu, y * bu + bu - thickness), new Point(thickness, thickness));   //Left bottom
+                Check(new Point(y+1, x),    new Point(x * bu, y * bu + bu - thickness), new Point(bu, thickness));          //Bottom
+
+                Check(new Point(y+1, x+1),  new Point(x * bu + bu - thickness, y * bu + bu - thickness),    new Point(thickness, thickness)); //Right bottom
+            }
+        }
+    }
 }
