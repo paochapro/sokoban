@@ -12,7 +12,11 @@ class Player : ITimeShiftable
     List<Point> timePosition = new();
     Point position = Point.Zero;
 
-    public void ResetTime() => timePosition.Clear();
+    public void ResetTime()
+    {
+        timePosition.Clear();
+        NewTime(0);
+    }
 
     public void ShiftTo(int time)
     {
@@ -31,17 +35,29 @@ class Player : ITimeShiftable
 
     private bool TryMove(int x, int y)
     {
+        if (x == 0 && y == 0) return false;
+        
         Point move = new Point(x, y);
         Point finalPos = position + new Point(x, y);
+        
+        if (x != 0 && y != 0)
+        {
+            bool verticalMove = TryMove(0, y);
+            bool horizontalMove = TryMove(x, 0);
 
+            if(verticalMove && !horizontalMove) TryMove(x, 0);
+            if(!verticalMove && horizontalMove) TryMove(0, y);
+                
+            return verticalMove && horizontalMove;
+        }
+
+        
         if (Map.Walls[finalPos.Y, finalPos.X]) return false;
         if (!TryPush(move, finalPos)) return false;
 
         position += move;
 
-        if(x != 0 || y != 0) return true;
-
-        return false;
+        return true;
     }
 
     private bool TryPush(Point move, Point final)
@@ -66,9 +82,13 @@ class Player : ITimeShiftable
         if(MyGame.keys.IsKeyDown(Keys.Up)       && !pressingUp)     verticalMove = -1;
         if(MyGame.keys.IsKeyDown(Keys.Down)     && !pressingDown)   verticalMove = 1;
 
-        if (horizontalMove != 0 && verticalMove != 0)
-            horizontalMove = 0;
-        
+        /*if (horizontalMove != 0 && verticalMove != 0)
+        {
+            if (Map.Walls[position.Y, position.X + horizontalMove])
+                horizontalMove = 0;
+            else
+                verticalMove = 0;
+        }*/
 
         pressingUp      = MyGame.keys.IsKeyDown(Keys.Up);
         pressingDown    = MyGame.keys.IsKeyDown(Keys.Down);

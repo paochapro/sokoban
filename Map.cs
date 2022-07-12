@@ -4,7 +4,6 @@ using MonoGame.Extended;
 using System.Text;
 
 namespace Sokoban;
-
 using static Utils;
 
 static class Map
@@ -12,10 +11,13 @@ static class Map
     public static readonly int BlockUnit = 48;
     const string mapFolder = @"Content\maps\";
 
+    public static Point Size { get; private set; }
     public static bool[,] Walls => walls;
     public static List<Point> Goals => goals;
     static bool[,] walls;
     static List<Point> goals = new List<Point>();
+    public enum BlockType { None, Wall, Box, Goal, Player, BoxGoal, PlayerGoal }
+
 
     public static bool LoadMap(string mapfile)
     {
@@ -30,6 +32,7 @@ static class Map
             Point mapSize = Point.Zero;
             mapSize.X = reader.ReadByte();
             mapSize.Y = reader.ReadByte();
+            Size = mapSize;
 
             walls = new bool[mapSize.Y, mapSize.X];
 
@@ -42,14 +45,21 @@ static class Map
                     BlockType blockType = (BlockType)reader.ReadByte();
                     Point pos = new Point(x, y);
 
-                    if (blockType == BlockType.None) continue;
-                    if (blockType == BlockType.Wall) walls[y, x] = true;
-                    if (blockType == BlockType.Box) Box.Boxes.Add(new Box(x, y));
-                    if (blockType == BlockType.Goal) goals.Add(pos);
-                    if (blockType == BlockType.Player) MyGame.playerSpawn = pos;
+                    if (blockType == BlockType.None)    continue;
+                    if (blockType == BlockType.Wall)    walls[y, x] = true;
+                    if (blockType == BlockType.Box      || blockType == BlockType.BoxGoal)     Box.Boxes.Add(new Box(x, y));
+                    if (blockType == BlockType.Player   || blockType == BlockType.PlayerGoal)  MyGame.playerSpawn = pos;
+
+                    if (blockType == BlockType.Goal ||
+                        blockType == BlockType.BoxGoal ||
+                        blockType == BlockType.PlayerGoal)
+                    {
+                        goals.Add(pos);
+                    }
                 }
             }
         }
+
 
         CreateOutline();
 
@@ -104,8 +114,6 @@ static class Map
         reader.Close();
         writer.Close();
     }
-
-    public enum BlockType { None, Wall, Box, Goal, Player }
 
     static List<Rectangle> outline = new();
     static public List<Rectangle> Outline => outline;
