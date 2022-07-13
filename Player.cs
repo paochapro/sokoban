@@ -57,6 +57,8 @@ class Player : ITimeShiftable
 
         position += move;
 
+        MyGame.TimeAdd();
+
         return true;
     }
 
