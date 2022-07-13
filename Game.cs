@@ -1,8 +1,4 @@
-﻿using System.Globalization;
-using System.Net.Security;
-using System.Security.AccessControl;
-using System.Security.Principal;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Audio;
@@ -232,11 +228,7 @@ class MyGame : Game
 
         //Wall outlines
         foreach (Rectangle outline in Map.Outline)
-        {
-            Rectangle final = outline;
-            final.Location += new Point(Map.BlockUnit);
-            spriteBatch.FillRectangle(final, new Color(15, 86, 165));
-        }
+            spriteBatch.FillRectangle(outline, new Color(15, 86, 165));
 
         //Goals
         foreach (Point goal in Map.Goals)
