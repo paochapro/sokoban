@@ -289,14 +289,12 @@ class TextBox : UI
     {
         if (focus) return;
 
-        Console.WriteLine("TB Activated"); 
         window.TextInput += TextInput;
         focus = true;        
     }
 
     public void Deactivate()
     {
-        Console.WriteLine("TB Deactivated");
         window.TextInput -= TextInput;
         focus = false;
     }
@@ -345,6 +343,6 @@ class TextBox : UI
         else
             spriteBatch.DrawString(Font, writtenText, rect.Location.ToVector2() + new Vector2(10, 10), mainColor);
 
-        spriteBatch.DrawRectangle(rect, focus ? Color.Blue : mainColor, 3);
+        spriteBatch.DrawRectangle(rect, focus ? new Color(50,80,255) : mainColor, 3);
     }
 }

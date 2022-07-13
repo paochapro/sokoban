@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
 
 namespace Sokoban;
@@ -38,7 +39,7 @@ internal static class Utils
 
         return result;
     }
-
+    
     //Randomness
     static public int RandomBetween(int a, int b)
     {

@@ -79,10 +79,15 @@ class Player : ITimeShiftable
     {
         int horizontalMove = 0;
         int verticalMove = 0;
-        if(MyGame.keys.IsKeyDown(Keys.Left)     && !pressingLeft)   horizontalMove = -1;
+        /*if(MyGame.keys.IsKeyDown(Keys.Left)     && !pressingLeft)   horizontalMove = -1;
         if(MyGame.keys.IsKeyDown(Keys.Right)    && !pressingRight)  horizontalMove = 1;
         if(MyGame.keys.IsKeyDown(Keys.Up)       && !pressingUp)     verticalMove = -1;
-        if(MyGame.keys.IsKeyDown(Keys.Down)     && !pressingDown)   verticalMove = 1;
+        if(MyGame.keys.IsKeyDown(Keys.Down)     && !pressingDown)   verticalMove = 1;*/
+        
+        if(MyGame.IsKeyPressed(Keys.Left))      horizontalMove = -1;
+        if(MyGame.IsKeyPressed(Keys.Right))     horizontalMove = 1;
+        if(MyGame.IsKeyPressed(Keys.Up))        verticalMove = -1;
+        if(MyGame.IsKeyPressed(Keys.Down))       verticalMove = 1;
 
         /*if (horizontalMove != 0 && verticalMove != 0)
         {

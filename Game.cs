@@ -28,14 +28,15 @@ class MyGame : Game
     public static MouseState mouse { get => Mouse.GetState(); }
     public static KeyboardState keys { get => Keyboard.GetState(); }
     public static KeyboardState previousKeys;
-
+    public static bool IsKeyPressed(Keys key) => MyGame.keys.IsKeyDown(key) && !MyGame.previousKeys.IsKeyDown(key);
+    
     static private Vector2 camera;
     static public Vector2 Camera => camera;
     static public bool Debug { get; private set; } = true;
 
     public enum GameState { Menu, Game }
 
-    private static GameState gameState; //never use this
+    private static GameState gameState;
     
     public static void SetGameState(GameState gameState)
     {
@@ -54,13 +55,13 @@ class MyGame : Game
     private const int totalMaps = 5;
     public static Player Player => player;
     private static Player player;
-    private static int currentMap = 1;
+    private static int nextMap = 1;
     private static int currentTime;
 
     //Initialization
     static bool mapCompleted = false;
     static public void MapCompleted() => mapCompleted = true;
-
+    
     private static void ChangeScreenSize(Point size)
     {
         screen = size;
@@ -71,14 +72,17 @@ class MyGame : Game
 
     private void StartMap(int map)
     {
-        currentMap = map;
+        nextMap = map + 1;
         StartMap("map" + map);
     }
-    
     private void StartMap(string map)
     {
-        SetGameState(GameState.Game);
-
+        if (gameState != GameState.Game)
+        {
+            SetGameState(GameState.Game);
+            Window.TextInput += Undo;    
+        }
+        
         Console.WriteLine("starting map: " + map);
         
         Box.Boxes.Clear();
@@ -115,9 +119,7 @@ class MyGame : Game
         ChangeScreenSize(defaultScreenSize);
 
         SoundEffect.MasterVolume = defaultVolume;
-
-        Window.TextInput += Undo;
-
+        
         base.Initialize();
     }
 
@@ -166,18 +168,16 @@ class MyGame : Game
         {
             Controls();
             player.PlayerMove();
-        }
-
-        if (mapCompleted)
-        {
-            mapCompleted = false;
-
-            int nextMap = currentMap + 1;
-
-            if (nextMap < 1 || nextMap > totalMaps)
-                StartMenu();
-            else
-                StartMap(nextMap);
+            
+            if (mapCompleted)
+            {
+                mapCompleted = false;
+                
+                if (nextMap < 1 || nextMap > totalMaps)
+                    StartMenu();
+                else
+                    StartMap(nextMap);
+            }
         }
 
         previousKeys = keys;
@@ -187,17 +187,16 @@ class MyGame : Game
 
     static private void Controls()
     {
-        if (keys.IsKeyDown(Keys.R) && !previousKeys.IsKeyDown(Keys.R))
+        if (IsKeyPressed(Keys.R))
         {
             TimeShift(0);
             Reset();
         }
+        if(IsKeyPressed(Keys.O)) MapCompleted();
     }
 
     static private void Undo(object? sender, TextInputEventArgs args)
     {
-        if(gameState != GameState.Game) return;
-        
         if (char.ToLower(args.Character) == 'z')
             PreviousTime();
     }
@@ -248,8 +247,9 @@ class MyGame : Game
     {
     }
 
-    static private void StartMenu()
+    private void StartMenu()
     {
+        Window.TextInput -= Undo;
         ChangeScreenSize(defaultScreenSize);
         SetGameState(GameState.Menu);
     }
@@ -293,7 +293,7 @@ class MyGame : Game
         Point buttonPos = new(center(defaultScreenSize.X, buttonSize.X), tbPos.Y + tbSize.Y + 10);
 
         var func = () => {
-            currentMap = -1;
+            nextMap = -1;
             StartMap(tbCustomMap.Text);
         };
         UI.Add(new Button(new Rectangle(buttonPos, buttonSize), func, "Start", 0));
