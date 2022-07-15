@@ -4,9 +4,9 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
 using System.Text;
 
-namespace Sokoban;
+using static Sokoban.Utils;
 
-using static Utils;
+namespace Sokoban;
 
 //Ui
 internal abstract class UI
@@ -41,11 +41,12 @@ internal abstract class UI
         Font = Assets.Load<SpriteFont>("bahnschrift")!;
     }
 
-    protected string text;
+    public string text;
 
     bool locked = false;
     protected bool allowHold;
-
+    public bool Hidden { get; set; }
+    
     public bool Locked
     {
         get => locked;
@@ -104,7 +105,7 @@ internal abstract class UI
     static public void DrawElements(SpriteBatch spriteBatch)
     {
         foreach (UI element in elements)
-            if (element.layer == CurrentLayer)
+            if (element.layer == CurrentLayer && !element.Hidden)
                 element.Draw(spriteBatch);
     }
     static public T Add<T>(T elem) where T : UI
@@ -118,6 +119,7 @@ internal abstract class UI
 internal class Button : UI
 {
     event Action func;
+    public bool OnlyText { get; set; }
 
     public Button(Rectangle rect, Action func, string text, int layer)
         : base(rect, text, layer)
@@ -129,11 +131,14 @@ internal class Button : UI
 
     protected override void Draw(SpriteBatch spriteBatch)
     {
-        spriteBatch.FillRectangle(rect, bgColor);
-        spriteBatch.DrawRectangle(rect, mainColor, 4);
-        
         float scale = 1f;
-        
+
+        if (!OnlyText)
+        {
+            spriteBatch.FillRectangle(rect, bgColor);
+            spriteBatch.DrawRectangle(rect, mainColor, 4);
+        }
+
         Vector2 measure = Font.MeasureString(text) * scale;
         Vector2 position = new Vector2(center(rect).X - measure.X / 2, center(rect).Y - measure.Y / 2);
         
@@ -269,6 +274,26 @@ internal class Slider : UI
     }
 }
 
+class Label : UI
+{
+    public Color Color { get; set; }
+
+    public Label(Point pos, string text, Color color, int layer)
+        : base(new Rectangle(pos, Point.Zero), text, layer)
+    {
+        Color = color;
+    }
+    
+    protected override void Update(KeyboardState keys, MouseState mouse) {}
+
+    protected override void Draw(SpriteBatch spriteBatch)
+    {
+        spriteBatch.DrawString(Font, text, rect.Location.ToVector2(), Color);
+    }
+
+    public override void Activate() {}
+}
+
 class TextBox : UI
 {
     const string avaliableCharaters = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890-=!@#$%^&*()_+[]{};':|\\\",./<>?`~ ";
@@ -343,6 +368,6 @@ class TextBox : UI
         else
             spriteBatch.DrawString(Font, writtenText, rect.Location.ToVector2() + new Vector2(10, 10), mainColor);
 
-        spriteBatch.DrawRectangle(rect, focus ? new Color(50,80,255) : mainColor, 3);
+        spriteBatch.DrawRectangle(rect, focus ? Color.Blue : mainColor, 3);
     }
 }

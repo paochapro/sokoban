@@ -1,4 +1,6 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System.Net.Mail;
+using System.Runtime.InteropServices;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Audio;
@@ -49,7 +51,7 @@ class MyGame : Game
         [GameState.Menu] = DrawMenu,
         [GameState.Game] = DrawGame,
     };
-
+    
     //Game
     private const string mapExtension = ".bin";
     private const int totalMaps = 5;
@@ -73,28 +75,41 @@ class MyGame : Game
     private void StartMap(int map)
     {
         nextMap = map + 1;
-        StartMap("map" + map);
+        StartMap("map" + map, false);
     }
-    private void StartMap(string map)
+    private void StartMap(string map, bool leaveOnWin)
     {
+        if (!Map.Exists(map + mapExtension))
+        {
+            Console.WriteLine("Map " + map + "wasnt found, returning to menu");
+            StartMenu();
+            return;
+        }
+        
         if (gameState != GameState.Game)
         {
             SetGameState(GameState.Game);
-            Window.TextInput += Undo;    
+            Window.TextInput += Undo;
         }
         
         Console.WriteLine("starting map: " + map);
+
+        if (leaveOnWin) nextMap = -1;
         
         Box.Boxes.Clear();
         Map.Goals.Clear();
         player.ResetTime();
 
-        Map.LoadMap(map + mapExtension);
+        if (!Map.LoadMap(map + mapExtension))
+            throw new Exception("Map in LoadMap somehow wasnt found");
+
         player.SetPosition(playerSpawn);
 
         ChangeScreenSize(Map.Size * new Point(Map.BlockUnit));
-        menuButton.Position = new(screenSize.X - buttonSize.X - percent(screenSize.X, 3), screenSize.Y - buttonSize.Y - percent(screenSize.Y, 2));
-        
+        menuButton.Position = new(screenSize.X - menuButtonSize.X - percent(screenSize.X, 3), screenSize.Y - menuButtonSize.Y - percent(screenSize.Y, 2));
+
+        UpdateMovesLabel(0);
+
         Reset();
     }
 
@@ -123,6 +138,13 @@ class MyGame : Game
         base.Initialize();
     }
 
+    private static void UpdateMovesLabel(int time)
+    {
+        movesLabel.text = movesLabelText + time;
+        Point measure = UI.Font.MeasureString(movesLabel.text).ToPoint();
+        movesLabel.Position = new Point(center(screenSize.X, measure.X), screenSize.Y - measure.Y);
+    }
+
     //Time
     static public void TimeAdd()
     {
@@ -130,6 +152,8 @@ class MyGame : Game
 
         Box.Boxes.ForEach(b => b.NewTime(currentTime));
         player.NewTime(currentTime);
+
+        UpdateMovesLabel(currentTime);
     }
 
     static private void TimeShift(int time)
@@ -137,6 +161,8 @@ class MyGame : Game
         Box.Boxes.ForEach(b => b.ShiftTo(time));
         player.ShiftTo(time);
         Box.UpdateGoals();
+        
+        UpdateMovesLabel(time);
     }
 
     static private void PreviousTime()
@@ -200,47 +226,16 @@ class MyGame : Game
         if (char.ToLower(args.Character) == 'z')
             PreviousTime();
     }
-
+    
     //Draw
     static private void DrawGame()
     {
-        //Bg
-        bool light = false;
-        for (int y = 0; y < Map.Size.Y; ++y)
-        {
-            for(int x = 0; x < Map.Size.X; ++x)
-            {
-                Color color = light ? new Color(247, 242, 212) : new Color(242, 237, 207);
-                spriteBatch.FillRectangle(new Rectangle(new Point(x,y) * new Point(Map.BlockUnit), new Point(Map.BlockUnit)), color);
-                light = !light;
-            }
-
-            if(Map.Size.X % 2 == 0)
-                light = !light;
-        }
-
-        //Walls
-        for (int y = 0; y < Map.Walls.GetLength(0); ++y)
-            for (int x = 0; x < Map.Walls.GetLength(1); ++x)
-                if (Map.Walls[y,x])
-                    spriteBatch.FillRectangle(new Rectangle(new Point(x,y) * new Point(Map.BlockUnit), new Point(Map.BlockUnit)), new Color(35,106,185));
-
-        //Wall outlines
-        foreach (Rectangle outline in Map.Outline)
-            spriteBatch.FillRectangle(outline, new Color(15, 86, 165));
-
-        //Goals
-        foreach (Point goal in Map.Goals)
-            spriteBatch.FillRectangle(new Rectangle(goal * new Point(Map.BlockUnit), new Point(Map.BlockUnit)), new Color(207, 202, 172));
-
+        //Bg, walls, goals
+        Map.DrawMap(spriteBatch);
+        
         //Boxes and player
         Box.Boxes.ForEach(b => b.Draw(spriteBatch));
         player.Draw(spriteBatch);
-
-        //Moves
-        string text = "Moves: " + currentTime;
-        Vector2 measure = UI.Font.MeasureString(text);
-        spriteBatch.DrawString(UI.Font, text, new Vector2(center(screenSize.X, measure.X), screenSize.Y - measure.Y), Color.Black);
     }
 
     static private void DrawMenu()
@@ -249,6 +244,8 @@ class MyGame : Game
 
     private void StartMenu()
     {
+        if (gameState == GameState.Menu) return;
+
         Window.TextInput -= Undo;
         ChangeScreenSize(defaultScreenSize);
         SetGameState(GameState.Menu);
@@ -275,36 +272,65 @@ class MyGame : Game
     private static readonly int mapButtonsLength = (mapButtonSize.X + mapButtonOffset) * totalMaps;
     private static readonly Point mapMenuStart = new(center(defaultScreenSize.X, mapButtonsLength), center(defaultScreenSize.Y, mapButtonSize.Y));
 
+    private static Label movesLabel;
+    private static Button menuButton;
+    private readonly static Point startButtonSize = new(150, 150/3);
+    private readonly static Point menuButtonSize = new(125, 125/3 + 5);
+    private const string movesLabelText = "Moves: ";
+
     private void CreateUi()
     {        
+        //Choose map
         var createMapButton = (int m) =>
         {
             Point pos = new(mapMenuStart.X + (mapButtonSize.X + mapButtonOffset) * m, mapMenuStart.Y);
             UI.Add(new Button(new Rectangle(pos, mapButtonSize), () => StartMap(m+1), (m+1).ToString(), 0));
         };
-
+        
         for (int m = 0; m < totalMaps; ++m)
             createMapButton(m);
 
+        //Enter map through textbox
         Point tbSize = new(200, 50);
         Point tbPos = new(center(defaultScreenSize.X, tbSize.X), 400);
         TextBox tbCustomMap = UI.Add(new TextBox(new Rectangle(tbPos, tbSize), "enter map", 0));
 
-        Point buttonPos = new(center(defaultScreenSize.X, buttonSize.X), tbPos.Y + tbSize.Y + 10);
+        Point buttonPos = new(center(defaultScreenSize.X, startButtonSize.X), tbPos.Y + tbSize.Y + 10);
+        
+        UI.Add(new Button(new Rectangle(buttonPos, startButtonSize), () => StartMap(tbCustomMap.Text, true), "Start", 0));
 
-        var func = () => {
-            nextMap = -1;
-            StartMap(tbCustomMap.Text);
+        //Map list
+        int lastMapIndex = 0;
+        int x = 10;
+        int offset = 2;
+        
+        string text = "Avaliable maps:";
+        Point measure = UI.Font.MeasureString(text).ToPoint();
+        UI.Add(new Label(new Point(x, offset), text, Color.Black, 0));
+        
+        var addMapToList = (string map) =>
+        {
+            string text = (++lastMapIndex) + ". " + map;
+            Point measure = UI.Font.MeasureString(text).ToPoint();
+            Button mapButton = UI.Add(new Button(new Rectangle(x, lastMapIndex * measure.Y + offset, measure.X, measure.Y), () => StartMap(map, true), text, 0));
+            mapButton.OnlyText = true;
         };
-        UI.Add(new Button(new Rectangle(buttonPos, buttonSize), func, "Start", 0));
+
+        string[] mapFiles = Directory.GetFiles(Map.mapFolder, mapExtension.Remove(0));
+
+        foreach (string mapfile in mapFiles)
+        {
+            string map = mapfile.Remove(mapfile.IndexOf("."), mapExtension.Length);
+            map = map.Substring(mapfile.LastIndexOf("\\")+1);
+            
+            addMapToList(map);
+        }
         
         //Game
-        menuButton = UI.Add(new Button(new Rectangle(buttonPos, buttonSize), StartMenu, "Menu", 1));
+        menuButton = UI.Add(new Button(new Rectangle(Point.Zero, menuButtonSize), StartMenu, "Menu", 1));
+        movesLabel = UI.Add(new Label(Point.Zero, movesLabelText + currentTime, Color.Black, 1));
     }
 
-    private static Button menuButton;
-    private static Point buttonSize = new(150, 50);
-    
     public MyGame() : base()
     {
         graphics = new GraphicsDeviceManager(this);

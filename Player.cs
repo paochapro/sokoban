@@ -79,23 +79,11 @@ class Player : ITimeShiftable
     {
         int horizontalMove = 0;
         int verticalMove = 0;
-        /*if(MyGame.keys.IsKeyDown(Keys.Left)     && !pressingLeft)   horizontalMove = -1;
-        if(MyGame.keys.IsKeyDown(Keys.Right)    && !pressingRight)  horizontalMove = 1;
-        if(MyGame.keys.IsKeyDown(Keys.Up)       && !pressingUp)     verticalMove = -1;
-        if(MyGame.keys.IsKeyDown(Keys.Down)     && !pressingDown)   verticalMove = 1;*/
-        
+
         if(MyGame.IsKeyPressed(Keys.Left))      horizontalMove = -1;
         if(MyGame.IsKeyPressed(Keys.Right))     horizontalMove = 1;
         if(MyGame.IsKeyPressed(Keys.Up))        verticalMove = -1;
-        if(MyGame.IsKeyPressed(Keys.Down))       verticalMove = 1;
-
-        /*if (horizontalMove != 0 && verticalMove != 0)
-        {
-            if (Map.Walls[position.Y, position.X + horizontalMove])
-                horizontalMove = 0;
-            else
-                verticalMove = 0;
-        }*/
+        if(MyGame.IsKeyPressed(Keys.Down))      verticalMove = 1;
 
         pressingUp      = MyGame.keys.IsKeyDown(Keys.Up);
         pressingDown    = MyGame.keys.IsKeyDown(Keys.Down);
@@ -105,12 +93,14 @@ class Player : ITimeShiftable
         return TryMove(horizontalMove, verticalMove);
     }
 
+    private readonly Color fill = new(24, 44, 67);
+    private readonly Color outline = new Color(9, 29, 52);
     public void Draw(SpriteBatch spriteBatch)
     {
         Rectangle final = new Rectangle(position * new Point(Map.BlockUnit), new Point(Map.BlockUnit));
 
-        spriteBatch.FillRectangle(final, new Color(24, 44, 67));
-        spriteBatch.DrawRectangle(final, new Color(9, 29, 52), 5);
+        spriteBatch.FillRectangle(final, fill);
+        spriteBatch.DrawRectangle(final, outline, 5);
     }
 
     public Player(Point pos) => position = pos;

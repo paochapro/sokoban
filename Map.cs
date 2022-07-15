@@ -9,16 +9,17 @@ using static Utils;
 static class Map
 {
     public static readonly int BlockUnit = 48;
-    const string mapFolder = @"Content\maps\";
+    public const string mapFolder = @"Content\maps\";
 
     public static Point Size { get; private set; }
     public static bool[,] Walls => walls;
+    private static bool[,] walls;
     public static List<Point> Goals => goals;
-    static bool[,] walls;
-    static List<Point> goals = new List<Point>();
+    private static List<Point> goals = new List<Point>();
     public enum BlockType { None, Wall, Box, Goal, Player, BoxGoal, PlayerGoal }
 
-
+    public static bool Exists(string mapfile) => File.Exists(mapFolder + mapfile);
+    
     public static bool LoadMap(string mapfile)
     {
         if (!File.Exists(mapFolder + mapfile))
@@ -153,5 +154,44 @@ static class Map
                 Check(new Point(y+1, x+1),  new Point(x * bu + bu - thickness, y * bu + bu - thickness),    new Point(thickness, thickness)); //Right bottom
             }
         }
+    }
+    
+    //Colors
+    private static readonly Color bgGridLight = new Color(247, 242, 212);
+    private static readonly Color bgGridDark = new Color(242, 237, 207);
+    private static readonly Color wallColor = new Color(35,106,185);
+    private static readonly Color goalColor = new Color(207, 202, 172);
+    private static readonly Color outlineColor =  new Color(15, 86, 165);
+
+    public static void DrawMap(SpriteBatch spriteBatch)
+    {
+        //Bg
+        bool light = false;
+        for (int y = 0; y < Size.Y; ++y)
+        {
+            for(int x = 0; x < Size.X; ++x)
+            {
+                Color color = light ? bgGridLight : bgGridDark;
+                spriteBatch.FillRectangle(new Rectangle(new Point(x,y) * new Point(BlockUnit), new Point(BlockUnit)), color);
+                light = !light;
+            }
+
+            if(Size.X % 2 == 0)
+                light = !light;
+        }
+
+        //Walls
+        for (int y = 0; y < walls.GetLength(0); ++y)
+        for (int x = 0; x < walls.GetLength(1); ++x)
+            if (walls[y,x])
+                spriteBatch.FillRectangle(new Rectangle(new Point(x,y) * new Point(BlockUnit), new Point(BlockUnit)), wallColor);
+
+        //Wall outlines
+        foreach (Rectangle outline in outline)
+            spriteBatch.FillRectangle(outline, outlineColor);
+
+        //Goals
+        foreach (Point goal in goals)
+            spriteBatch.FillRectangle(new Rectangle(goal * new Point(BlockUnit), new Point(BlockUnit)), goalColor);
     }
 }
